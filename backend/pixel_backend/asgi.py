@@ -1,9 +1,9 @@
 """
-ASGI config for pixel_backend project.
+ASGI‑конфигурация проекта pixel_backend.
 
-It exposes the ASGI callable as a module-level variable named ``application``.
+Она экспортирует вызываемый ASGI‑объект как переменную уровня модуля ``application``.
 
-For more information on this file, see
+Подробнее об этом файле см.:
 https://docs.djangoproject.com/en/6.0/howto/deployment/asgi/
 """
 

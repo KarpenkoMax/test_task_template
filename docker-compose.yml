@@ -35,6 +35,7 @@ services:
     command: >
       sh -lc "
         python manage.py migrate &&
+        python manage.py seed_pixel_events &&
         uvicorn pixel_backend.asgi:application --host 0.0.0.0 --port 8000 --reload
       "
 

@@ -1,19 +1,19 @@
 # React + TypeScript + Vite
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Этот шаблон даёт минимальную настройку, чтобы React работал в Vite с HMR и некоторыми правилами ESLint.
 
-Currently, two official plugins are available:
+Сейчас доступны два официальных плагина:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) использует [Babel](https://babeljs.io/) (или [oxc](https://oxc.rs), когда используется в [rolldown-vite](https://vite.dev/guide/rolldown)) для Fast Refresh
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) использует [SWC](https://swc.rs/) для Fast Refresh
 
 ## React Compiler
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+React Compiler не включён в этом шаблоне из‑за влияния на производительность разработки и сборки. Как включить — см. [документацию](https://react.dev/learn/react-compiler/installation).
 
-## Expanding the ESLint configuration
+## Расширение конфигурации ESLint
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+Если вы разрабатываете продакшн‑приложение, рекомендуем обновить конфигурацию, чтобы включить правила линтинга с учётом типов:
 
 ```js
 export default defineConfig([
@@ -21,29 +21,29 @@ export default defineConfig([
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
-      // Other configs...
+      // Другие конфиги...
 
-      // Remove tseslint.configs.recommended and replace with this
+      // Уберите tseslint.configs.recommended и замените на это
       tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
+      // Либо используйте это для более строгих правил
       tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
+      // Опционально, добавьте это для стилистических правил
       tseslint.configs.stylisticTypeChecked,
 
-      // Other configs...
+      // Другие конфиги...
     ],
     languageOptions: {
       parserOptions: {
         project: ['./tsconfig.node.json', './tsconfig.app.json'],
         tsconfigRootDir: import.meta.dirname,
       },
-      // other options...
+      // другие опции...
     },
   },
 ])
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Также можно установить [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) и [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) для React‑специфичных правил линтинга:
 
 ```js
 // eslint.config.js
@@ -55,10 +55,10 @@ export default defineConfig([
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
-      // Other configs...
-      // Enable lint rules for React
+      // Другие конфиги...
+      // Включить правила линтинга для React
       reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
+      // Включить правила линтинга для React DOM
       reactDom.configs.recommended,
     ],
     languageOptions: {
@@ -66,7 +66,7 @@ export default defineConfig([
         project: ['./tsconfig.node.json', './tsconfig.app.json'],
         tsconfigRootDir: import.meta.dirname,
       },
-      // other options...
+      // другие опции...
     },
   },
 ])
