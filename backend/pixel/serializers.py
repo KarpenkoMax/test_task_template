@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any, Dict
+
 from rest_framework import serializers
 
 from .models import PixelEvent
@@ -10,7 +12,6 @@ class PixelEventSerializer(serializers.ModelSerializer):
         model = PixelEvent
         fields = [
             "id",
-            "created_at",
             "client_id",
             "session_id",
             "event_type",
@@ -19,39 +20,27 @@ class PixelEventSerializer(serializers.ModelSerializer):
             "meta",
             "user_agent",
             "ip",
+            "created_at",
         ]
 
 
-class IngestEventSerializer(serializers.Serializer):
-    """Single event payload.
-
-    NOTE: This serializer is intentionally minimal for the interview task.
-    The candidate may extend it as needed.
-    """
-
+class IncomingEventSerializer(serializers.Serializer):
     event_type = serializers.CharField(max_length=32)
     ts = serializers.DateTimeField()
     url = serializers.CharField()
-    meta = serializers.DictField(required=False)
+    meta = serializers.DictField(child=serializers.JSONField(), required=False)
 
 
 class IngestRequestSerializer(serializers.Serializer):
-    """Accepts either a single `event` or a list of `events`.
-
-    Exactly one of `event` and `events` must be provided.
-    """
 
     client_id = serializers.CharField(max_length=64)
     session_id = serializers.CharField(max_length=64)
+    event = IncomingEventSerializer(required=False)
+    events = IncomingEventSerializer(many=True, required=False)
 
-    event = IngestEventSerializer(required=False)
-    events = IngestEventSerializer(many=True, required=False)
-
-    def validate(self, attrs):
-        has_event = "event" in attrs
-        has_events = "events" in attrs
-        if has_event == has_events:
-            raise serializers.ValidationError(
-                "Provide exactly one of: event or events"
-            )
+    def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
+        has_single = "event" in attrs
+        has_batch = "events" in attrs
+        if has_single == has_batch:
+            raise serializers.ValidationError("Provide exactly one of: 'event' or 'events'.")
         return attrs

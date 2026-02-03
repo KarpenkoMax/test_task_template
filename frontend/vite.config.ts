@@ -1,17 +1,20 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
-// Прокси /api -> Django (имя сервиса в docker-compose)
 export default defineConfig({
   plugins: [react()],
   server: {
     host: true,
     port: 5173,
+    strictPort: true,
     proxy: {
       "/api": {
         target: "http://backend:8000",
         changeOrigin: true,
       },
     },
+  },
+  test: {
+    environment: "jsdom",
   },
 });

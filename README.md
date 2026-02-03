@@ -1,41 +1,29 @@
-# Пиксельное тестовое задание для интервью (React + Django REST + Postgres)
+# Pixel assignment scaffold
 
-Этот репозиторий — стартовый шаблон для онлайн‑интервью из двух частей (~1 час):
+Этот репозиторий — **шаблон интервью-задания** (умышленно неполный проект).
 
-- Часть 1 (без LLM): реализовать минимальный pixel‑скрипт + тесты
-- Часть 2 (LLM разрешён): реализовать ingest‑эндпоинт + небольшие улучшения UI
-
-## Запуск через Docker Compose
+## Запуск
 
 ```bash
 docker compose up --build
 ```
 
-Откройте:
 - Frontend: http://localhost:5173
 - Backend: http://localhost:8000
-- Health: http://localhost:8000/api/health/
 
-При первом запуске БД заполняется несколькими событиями (`seed_pixel_events`), чтобы UI не был пустым.
+## Тесты (без установки зависимостей на хост)
 
-## Задачи
-
-- [task1](tasks/part1.md)
-- [task2](tasks/part2.md)
-
-## Разработка (без Docker)
-
-Бэкенд:
 ```bash
-cd backend
-pip install -r requirements.txt
-python manage.py migrate
-python manage.py runserver
+docker compose up -d --build
+
+# Backend
+docker compose exec backend pytest
+
+# Frontend
+docker compose exec frontend npm test
 ```
 
-Фронтенд:
-```bash
-cd frontend
-npm install
-npm run dev
-```
+## Задания
+
+- `tasks/part1.md` — Pixel JS (без LLM)
+- `tasks/part2.md` — API ingest + UI (LLM разрешён)

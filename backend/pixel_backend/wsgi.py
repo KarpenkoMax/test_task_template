@@ -1,9 +1,9 @@
 """
-WSGI‑конфигурация проекта pixel_backend.
+WSGI config for pixel_backend project.
 
-Она экспортирует вызываемый WSGI‑объект как переменную уровня модуля ``application``.
+It exposes the WSGI callable as a module-level variable named ``application``.
 
-Подробнее об этом файле см.:
+For more information on this file, see
 https://docs.djangoproject.com/en/6.0/howto/deployment/wsgi/
 """
 

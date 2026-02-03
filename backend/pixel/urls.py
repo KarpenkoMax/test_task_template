@@ -1,12 +1,10 @@
-from __future__ import annotations
-
 from django.urls import path
 
-from . import views
+from .views import EventsListView, HealthView, IngestView
 
 
 urlpatterns = [
-    path("health/", views.HealthView.as_view(), name="health"),
-    path("events/", views.PixelEventListView.as_view(), name="events"),
-    path("ingest/", views.ingest, name="ingest"),
+    path("health/", HealthView.as_view(), name="health"),
+    path("events/", EventsListView.as_view(), name="events_list"),
+    path("ingest/", IngestView.as_view(), name="ingest"),
 ]

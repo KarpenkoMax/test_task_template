@@ -35,7 +35,7 @@ services:
     command: >
       sh -lc "
         python manage.py migrate &&
-        python manage.py seed_pixel_events &&
+        python manage.py seed_pixel_events --count 25 || true &&
         uvicorn pixel_backend.asgi:application --host 0.0.0.0 --port 8000 --reload
       "
 

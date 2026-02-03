@@ -49,9 +49,9 @@ describe("Pixel", () => {
     const px = new Pixel();
     px.init({ endpoint: "/api/ingest/", client_id: "c_123" });
 
-    // Ожидаемое поведение (interview):
-    // - track() не должен выбрасывать исключение
-    // - событие должно попасть в очередь sessionStorage
+    // Expected behavior (interview):
+    // - track() should not throw
+    // - the event should be enqueued in sessionStorage
     await px.track({
       event_type: "click",
       ts: "2026-02-02T10:00:01Z",
@@ -66,7 +66,7 @@ describe("Pixel", () => {
   });
 
   it("flushes queued events on pagehide using sendBeacon (TODO)", async () => {
-    // Предзаполнить очередь, как если бы предыдущая отправка упала
+    // Prefill queue as if previous send failed
     sessionStorage.setItem(
       "__pixel_queue__",
       JSON.stringify([
@@ -88,8 +88,8 @@ describe("Pixel", () => {
     const px = new Pixel();
     px.init({ endpoint: "/api/ingest/", client_id: "c_123" });
 
-    // Ожидаемое поведение (interview): init() регистрирует обработчик pagehide
-    // который отправляет очередь событий через sendBeacon.
+    // Expected behavior (interview): init() registers a pagehide handler
+    // that flushes the queue using sendBeacon.
     window.dispatchEvent(new Event("pagehide"));
 
     expect(sendBeacon).toHaveBeenCalledTimes(1);

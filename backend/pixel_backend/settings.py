@@ -1,88 +1,86 @@
-"""Настройки Django для pixel‑задания.
+"""Django settings for the pixel-assignment scaffold.
 
-Этот репозиторий рассчитан на интервью:
-- запускается в Docker Compose с Postgres
-- отдаёт небольшой DRF API под /api
-- обслуживает React отдельно (Vite dev server)
+This repository is an interview exercise, so the settings are intentionally
+simple and tuned for local development via Docker Compose.
 """
 
-from __future__ import annotations
-
-import os
 from pathlib import Path
+import os
 
+from dotenv import load_dotenv
 
+# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
-def _get_bool(name: str, default: bool) -> bool:
-    raw = os.getenv(name)
-    if raw is None:
-        return default
-    return raw.strip().lower() in {"1", "true", "yes", "y", "on"}
+# Load .env from repository root if present (Docker Compose mounts it).
+load_dotenv(BASE_DIR.parent / ".env")
 
 
-def _get_csv(name: str, default: str) -> list[str]:
-    raw = os.getenv(name, default)
-    return [x.strip() for x in raw.split(",") if x.strip()]
+# Quick-start development settings - unsuitable for production
+# See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
-
+# SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-secret-key")
-DEBUG = _get_bool("DJANGO_DEBUG", True)
-ALLOWED_HOSTS = _get_csv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,backend")
 
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = os.getenv("DJANGO_DEBUG", "1") == "1"
+
+ALLOWED_HOSTS = [h.strip() for h in os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,backend").split(",") if h.strip()]
+
+
+# Application definition
 
 INSTALLED_APPS = [
-    "django.contrib.admin",
-    "django.contrib.auth",
-    "django.contrib.contenttypes",
-    "django.contrib.sessions",
-    "django.contrib.messages",
-    "django.contrib.staticfiles",
-    # Сторонние
-    "rest_framework",
-    "corsheaders",
-    # Локальные
-    "pixel",
-]
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
 
+    # Third-party
+    'rest_framework',
+    'corsheaders',
+
+    # Local
+    'pixel',
+]
 
 MIDDLEWARE = [
-    "django.middleware.security.SecurityMiddleware",
-    "corsheaders.middleware.CorsMiddleware",
-    "django.contrib.sessions.middleware.SessionMiddleware",
-    "django.middleware.common.CommonMiddleware",
-    "django.middleware.csrf.CsrfViewMiddleware",
-    "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "django.contrib.messages.middleware.MessageMiddleware",
-    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.security.SecurityMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-
-ROOT_URLCONF = "pixel_backend.urls"
-
+ROOT_URLCONF = 'pixel_backend.urls'
 
 TEMPLATES = [
     {
-        "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
-        "APP_DIRS": True,
-        "OPTIONS": {
-            "context_processors": [
-                "django.template.context_processors.request",
-                "django.contrib.auth.context_processors.auth",
-                "django.contrib.messages.context_processors.messages",
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
             ],
         },
-    }
+    },
 ]
 
+WSGI_APPLICATION = 'pixel_backend.wsgi.application'
+ASGI_APPLICATION = 'pixel_backend.asgi.application'
 
-WSGI_APPLICATION = "pixel_backend.wsgi.application"
-ASGI_APPLICATION = "pixel_backend.asgi.application"
 
+# Database
+# https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-# --- База данных (Postgres в docker, sqlite как fallback для локальной разработки) ---
 POSTGRES_HOST = os.getenv("POSTGRES_HOST")
 
 if POSTGRES_HOST:
@@ -97,6 +95,7 @@ if POSTGRES_HOST:
         }
     }
 else:
+    # Fallback for running without Postgres.
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
@@ -105,38 +104,55 @@ else:
     }
 
 
+# Password validation
+# https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
+
 AUTH_PASSWORD_VALIDATORS = [
-    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
-    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
-    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
-    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+    {
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
 ]
 
 
-LANGUAGE_CODE = "en-us"
-TIME_ZONE = "UTC"
+# Internationalization
+# https://docs.djangoproject.com/en/6.0/topics/i18n/
+
+LANGUAGE_CODE = 'en-us'
+
+TIME_ZONE = 'UTC'
+
 USE_I18N = True
+
 USE_TZ = True
 
 
-STATIC_URL = "static/"
-DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+# Static files (CSS, JavaScript, Images)
+# https://docs.djangoproject.com/en/6.0/howto/static-files/
+
+STATIC_URL = 'static/'
 
 
-# --- CORS/CSRF для локальной разработки (React Vite на 5173) ---
+# CORS (React dev server)
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
 ]
 
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-]
 
-
-# --- DRF по умолчанию ---
+# DRF defaults
 REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
 }
+
+
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

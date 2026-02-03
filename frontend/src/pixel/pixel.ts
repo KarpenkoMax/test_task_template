@@ -8,7 +8,7 @@ export type PixelEvent = {
 };
 
 export type PixelConfig = {
-  endpoint: string; // например, /api/ingest/
+  endpoint: string; // e.g. /api/ingest/
   client_id: string;
   session_storage_key?: string;
 };
@@ -24,7 +24,7 @@ export class Pixel {
     this.clientId = cfg.client_id;
     this.storageKey = cfg.session_storage_key || this.storageKey;
 
-    // Простой session id для каждой вкладки.
+    // Simple session id per tab.
     const existing = sessionStorage.getItem("__pixel_session_id__");
     if (existing) {
       this.sessionId = existing;
@@ -34,9 +34,9 @@ export class Pixel {
     }
 
     // TODO (interview):
-    // - загрузить очередь событий из sessionStorage
-    // - отправить очередь при init
-    // - отправлять на pagehide через sendBeacon/keepalive
+    // - load queued events from sessionStorage
+    // - flush queue on init (optional)
+    // - register pagehide handler that flushes queue via sendBeacon/keepalive
   }
 
   getSessionId() {
@@ -50,13 +50,13 @@ export class Pixel {
       event,
     };
 
-    // Минимальная реализация: fire-and-forget.
-    // TODO (interview): при ошибке запроса -> положить в sessionStorage и ретраить позже.
+    // Minimal implementation: fire-and-forget.
+    // TODO (interview): if request fails -> enqueue into sessionStorage and retry later.
     await fetch(this.endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
-      // keepalive помогает, когда страница вот-вот выгружается (не везде поддерживается)
+      // keepalive helps when the page is unloading (not supported everywhere)
       keepalive: true,
     });
   }

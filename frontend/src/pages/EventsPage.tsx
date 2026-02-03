@@ -1,177 +1,266 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { getEvents, type GetEventsParams } from "../api/client";
-import type { PixelEvent } from "../api/types";
-import EventDetails from "../components/EventDetails";
 import { Pixel } from "../pixel/pixel";
 
-function formatTs(iso: string): string {
-  try {
-    return new Date(iso).toLocaleString();
-  } catch {
-    return iso;
-  }
-}
+type PixelEvent = {
+  id: number;
+  client_id: string;
+  session_id: string;
+  event_type: string;
+  ts: string;
+  url: string;
+  meta: any;
+  user_agent: string;
+  ip: string;
+  created_at: string;
+};
 
-function truncate(s: string, n: number): string {
-  if (s.length <= n) return s;
-  return s.slice(0, n - 1) + "…";
+type EventsResponse = {
+  total: number;
+  page: number;
+  per_page: number;
+  results: PixelEvent[];
+};
+
+function getOrCreateClientId(): string {
+  const key = "__pixel_client_id__";
+  const existing = localStorage.getItem(key);
+  if (existing) return existing;
+  const id = `c_${Math.random().toString(16).slice(2, 10)}`;
+  localStorage.setItem(key, id);
+  return id;
 }
 
 export default function EventsPage() {
-  const [items, setItems] = useState<PixelEvent[]>([]);
+  const pxRef = useRef<Pixel | null>(null);
+  const [clientIdFilter, setClientIdFilter] = useState("");
+  const [sessionIdFilter, setSessionIdFilter] = useState("");
+  const [eventTypeFilter, setEventTypeFilter] = useState("");
+  const [events, setEvents] = useState<PixelEvent[]>([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Фильтры (задача UI: подключить их к запросу)
-  const [clientId, setClientId] = useState("");
-  const [sessionId, setSessionId] = useState("");
-  const [eventType, setEventType] = useState("");
-
-  // Детали (задача UI: реализовать выбор строки + панель деталей)
   const [selected, setSelected] = useState<PixelEvent | null>(null);
 
-  const pixelRef = useRef<Pixel | null>(null);
+  // Init pixel once
+  useEffect(() => {
+    const px = new Pixel();
+    px.init({ endpoint: "/api/ingest/", client_id: getOrCreateClientId() });
+    pxRef.current = px;
+  }, []);
 
-  const params: GetEventsParams = useMemo(
-    () => ({
-      // TODO (interview): применить фильтры
-      // client_id: clientId || undefined,
-      // session_id: sessionId || undefined,
-      // event_type: eventType || undefined,
-    }),
-    [clientId, sessionId, eventType]
-  );
+  const query = useMemo(() => {
+    const params = new URLSearchParams();
+    if (clientIdFilter) params.set("client_id", clientIdFilter);
+    if (sessionIdFilter) params.set("session_id", sessionIdFilter);
+    if (eventTypeFilter) params.set("event_type", eventTypeFilter);
+    return params.toString();
+  }, [clientIdFilter, sessionIdFilter, eventTypeFilter]);
 
-  async function refresh() {
+  async function loadEvents() {
     setLoading(true);
     setError(null);
     try {
-      const data = await getEvents(params);
-      setItems(data.results);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      const res = await fetch(`/api/events/${query ? `?${query}` : ""}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = (await res.json()) as EventsResponse;
+      setEvents(data.results);
+      setTotal(data.total);
+      // keep selected in sync
+      if (selected) {
+        const updated = data.results.find((e) => e.id === selected.id) || null;
+        setSelected(updated);
+      }
+    } catch (e: any) {
+      setError(e?.message || "Failed to load events");
     } finally {
       setLoading(false);
     }
   }
 
+  // Initial load
   useEffect(() => {
-    const px = new Pixel();
-    px.init({ endpoint: "/api/ingest/", client_id: "ui_demo" });
-    pixelRef.current = px;
-    refresh();
+    void loadEvents();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function sendTestEvent() {
-    setSending(true);
-    setError(null);
-    try {
-      const px = pixelRef.current;
-      if (!px) {
-        throw new Error("Pixel not initialized");
-      }
-      await px.track({
+  function trackFilterInput(field: string, value: string) {
+    const px = pxRef.current;
+    if (!px) return;
+    // Fire and forget (should not block UI). Candidate may improve reliability in Part 1.
+    void px
+      .track({
         event_type: "click",
         ts: new Date().toISOString(),
         url: window.location.href,
-        meta: { source: "ui-button" },
+        meta: {
+          action: "input",
+          field,
+          value_length: value.length,
+        },
+      })
+      .catch(() => {
+        // ignore: pixel should not break the UI
       });
-      await refresh();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setSending(false);
-    }
   }
 
   return (
-    <div style={{ padding: 16, fontFamily: "system-ui, -apple-system, Segoe UI, Roboto" }}>
-      <h1 style={{ marginTop: 0 }}>Pixel Events</h1>
+    <div style={{ fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif", padding: 16 }}>
+      <h1 style={{ margin: "0 0 12px 0" }}>Pixel events</h1>
 
-      <div style={{ display: "flex", gap: 12, alignItems: "end", flexWrap: "wrap" }}>
-        <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <span style={{ fontSize: 12, opacity: 0.7 }}>client_id</span>
-          <input value={clientId} onChange={(e) => setClientId(e.target.value)} placeholder="c_123" />
-        </label>
-        <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <span style={{ fontSize: 12, opacity: 0.7 }}>session_id</span>
-          <input value={sessionId} onChange={(e) => setSessionId(e.target.value)} placeholder="s_456" />
-        </label>
-        <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <span style={{ fontSize: 12, opacity: 0.7 }}>event_type</span>
-          <select value={eventType} onChange={(e) => setEventType(e.target.value)}>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end", marginBottom: 12 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <label style={{ fontSize: 12, opacity: 0.8 }}>client_id</label>
+          <input
+            value={clientIdFilter}
+            onChange={(e) => {
+              setClientIdFilter(e.target.value);
+              trackFilterInput("client_id", e.target.value);
+            }}
+            placeholder="e.g. c_demo"
+            style={{ padding: "6px 8px", minWidth: 180 }}
+          />
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <label style={{ fontSize: 12, opacity: 0.8 }}>session_id</label>
+          <input
+            value={sessionIdFilter}
+            onChange={(e) => {
+              setSessionIdFilter(e.target.value);
+              trackFilterInput("session_id", e.target.value);
+            }}
+            placeholder="e.g. s_1234"
+            style={{ padding: "6px 8px", minWidth: 180 }}
+          />
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <label style={{ fontSize: 12, opacity: 0.8 }}>event_type</label>
+          <select
+            value={eventTypeFilter}
+            onChange={(e) => {
+              setEventTypeFilter(e.target.value);
+              trackFilterInput("event_type", e.target.value);
+            }}
+            style={{ padding: "6px 8px", minWidth: 180 }}
+          >
             <option value="">(any)</option>
             <option value="page_view">page_view</option>
             <option value="click">click</option>
             <option value="form_submit">form_submit</option>
           </select>
-        </label>
-        <button onClick={refresh} disabled={loading} style={{ height: 32 }}>
+        </div>
+
+        <button
+          onClick={() => void loadEvents()}
+          style={{ padding: "7px 10px", cursor: "pointer" }}
+          disabled={loading}
+          title="Reload events"
+        >
           {loading ? "Loading…" : "Refresh"}
         </button>
-        <button onClick={sendTestEvent} disabled={loading || sending} style={{ height: 32 }}>
-          {sending ? "Sending…" : "Send test event"}
-        </button>
+
+        <div style={{ fontSize: 12, opacity: 0.8, marginLeft: "auto" }}>Total: {total}</div>
       </div>
 
-      {error && (
-        <div style={{ marginTop: 12, padding: 12, border: "1px solid #f00", borderRadius: 8 }}>
-          <strong>Error:</strong> {error}
-        </div>
-      )}
+      {error ? (
+        <div style={{ marginBottom: 12, color: "crimson" }}>Error: {error}</div>
+      ) : null}
 
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 12, marginTop: 12 }}>
-        <div style={{ border: "1px solid #ddd", borderRadius: 8, overflow: "hidden" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ background: "#f7f7f7" }}>
-                <th style={{ textAlign: "left", padding: 8, width: 170 }}>ts</th>
-                <th style={{ textAlign: "left", padding: 8, width: 110 }}>event</th>
-                <th style={{ textAlign: "left", padding: 8, width: 100 }}>client</th>
-                <th style={{ textAlign: "left", padding: 8, width: 100 }}>session</th>
-                <th style={{ textAlign: "left", padding: 8 }}>url</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((ev) => (
+      <div style={{ border: "1px solid #ddd", borderRadius: 8, overflow: "hidden" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead style={{ background: "#f6f6f6" }}>
+            <tr>
+              <th style={{ textAlign: "left", padding: 8, fontSize: 12 }}>ts</th>
+              <th style={{ textAlign: "left", padding: 8, fontSize: 12 }}>event_type</th>
+              <th style={{ textAlign: "left", padding: 8, fontSize: 12 }}>client_id</th>
+              <th style={{ textAlign: "left", padding: 8, fontSize: 12 }}>session_id</th>
+              <th style={{ textAlign: "left", padding: 8, fontSize: 12 }}>url</th>
+            </tr>
+          </thead>
+          <tbody>
+            {events.map((e) => {
+              const isSel = selected?.id === e.id;
+              return (
                 <tr
-                  key={ev.id}
-                  style={{ borderTop: "1px solid #eee", cursor: "pointer" }}
-                  onClick={() => {
-                    setSelected(ev);
+                  key={e.id}
+                  onClick={() => setSelected(e)}
+                  style={{
+                    cursor: "pointer",
+                    background: isSel ? "#eef6ff" : "transparent",
+                    borderTop: "1px solid #eee",
                   }}
                 >
-                  <td style={{ padding: 8, whiteSpace: "nowrap" }}>{formatTs(ev.ts)}</td>
-                  <td style={{ padding: 8 }}>{ev.event_type}</td>
-                  <td style={{ padding: 8 }}>{ev.client_id}</td>
-                  <td style={{ padding: 8 }}>{ev.session_id}</td>
-                  <td style={{ padding: 8, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>
-                    {truncate(ev.url, 80)}
+                  <td style={{ padding: 8, fontSize: 12, whiteSpace: "nowrap" }}>{new Date(e.ts).toLocaleString()}</td>
+                  <td style={{ padding: 8, fontSize: 12 }}>{e.event_type}</td>
+                  <td style={{ padding: 8, fontSize: 12 }}>{e.client_id}</td>
+                  <td style={{ padding: 8, fontSize: 12 }}>{e.session_id}</td>
+                  <td style={{ padding: 8, fontSize: 12, maxWidth: 520, overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {e.url}
                   </td>
                 </tr>
-              ))}
-              {!items.length && !loading && (
-                <tr>
-                  <td colSpan={5} style={{ padding: 12, opacity: 0.7 }}>
-                    No events
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        <div style={{ border: "1px solid #ddd", borderRadius: 8, padding: 12 }}>
-          <h3 style={{ marginTop: 0 }}>Event details</h3>
-          <EventDetails event={selected} />
-        </div>
+              );
+            })}
+            {events.length === 0 ? (
+              <tr>
+                <td colSpan={5} style={{ padding: 12, fontSize: 12, opacity: 0.7 }}>
+                  No events
+                </td>
+              </tr>
+            ) : null}
+          </tbody>
+        </table>
       </div>
 
-      <div style={{ marginTop: 14, fontSize: 12, opacity: 0.7 }}>
-        Tip: the DB is seeded on first start (seed_pixel_events). Once the ingest endpoint is implemented,
-        you can send events from the pixel and refresh this page to see them.
+      {/*
+        Interview Part 2 UI task:
+        - move the details block below into a separate component
+        - render it as a modal dialog
+        - BONUS: refresh table automatically when filters change (no Refresh click)
+      */}
+      <div style={{ marginTop: 16 }}>
+        <h2 style={{ margin: "0 0 8px 0", fontSize: 16 }}>Details</h2>
+        {selected ? (
+          <div style={{ border: "1px solid #ddd", borderRadius: 8, padding: 12 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "140px 1fr", rowGap: 6, columnGap: 10 }}>
+              <div style={{ fontSize: 12, opacity: 0.7 }}>id</div>
+              <div style={{ fontSize: 12 }}>{selected.id}</div>
+
+              <div style={{ fontSize: 12, opacity: 0.7 }}>ts</div>
+              <div style={{ fontSize: 12 }}>{selected.ts}</div>
+
+              <div style={{ fontSize: 12, opacity: 0.7 }}>event_type</div>
+              <div style={{ fontSize: 12 }}>{selected.event_type}</div>
+
+              <div style={{ fontSize: 12, opacity: 0.7 }}>client_id</div>
+              <div style={{ fontSize: 12 }}>{selected.client_id}</div>
+
+              <div style={{ fontSize: 12, opacity: 0.7 }}>session_id</div>
+              <div style={{ fontSize: 12 }}>{selected.session_id}</div>
+
+              <div style={{ fontSize: 12, opacity: 0.7 }}>url</div>
+              <div style={{ fontSize: 12, wordBreak: "break-all" }}>{selected.url}</div>
+            </div>
+            <div style={{ marginTop: 10 }}>
+              <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 6 }}>meta</div>
+              <pre
+                style={{
+                  margin: 0,
+                  padding: 10,
+                  fontSize: 12,
+                  background: "#f6f6f6",
+                  borderRadius: 8,
+                  overflow: "auto",
+                  maxHeight: 240,
+                }}
+              >
+                {JSON.stringify(selected.meta ?? null, null, 2)}
+              </pre>
+            </div>
+          </div>
+        ) : (
+          <div style={{ fontSize: 12, opacity: 0.7 }}>Click a row in the table to see details.</div>
+        )}
       </div>
     </div>
   );
