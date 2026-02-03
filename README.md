@@ -25,5 +25,5 @@ docker compose exec frontend npm test
 
 ## Задания
 
-- `tasks/part1.md` — Pixel JS (без LLM)
-- `tasks/part2.md` — API ingest + UI (LLM разрешён)
+- [Задание 1](tasks/part1.md) — Pixel JS (без LLM)
+- [Задание 2](tasks/part2.md) — API ingest + UI (LLM разрешён)
