@@ -8,7 +8,7 @@ export type PixelEvent = {
 };
 
 export type PixelConfig = {
-  endpoint: string; // e.g. /api/ingest/
+  endpoint: string; // например: /api/ingest/
   client_id: string;
   session_storage_key?: string;
 };
@@ -24,7 +24,7 @@ export class Pixel {
     this.clientId = cfg.client_id;
     this.storageKey = cfg.session_storage_key || this.storageKey;
 
-    // Simple session id per tab.
+    // Простой session id для каждой вкладки.
     const existing = sessionStorage.getItem("__pixel_session_id__");
     if (existing) {
       this.sessionId = existing;
@@ -33,10 +33,18 @@ export class Pixel {
       sessionStorage.setItem("__pixel_session_id__", this.sessionId);
     }
 
-    // TODO (interview):
-    // - load queued events from sessionStorage
-    // - flush queue on init (optional)
-    // - register pagehide handler that flushes queue via sendBeacon/keepalive
+    // TODO (interview, Part 1):
+    // 1) Загрузить из sessionStorage "очередь" событий, которые не удалось доставить ранее.
+    //    Очередь хранится по ключу this.storageKey и представляет собой JSON-массив payload-объектов.
+    //
+    // 2) Зарегистрировать обработчик события pagehide:
+    //    - при pagehide нужно прочитать очередь из sessionStorage
+    //    - попытаться отправить её на this.endpoint
+    //    - если доступен navigator.sendBeacon — использовать его
+    //    - если отправка успешна — очистить очередь
+    //
+    // (Опционально) Можно попробовать "лучшей попыткой" отправить очередь сразу при init(),
+    // но это не обязательное требование.
   }
 
   getSessionId() {
@@ -50,13 +58,22 @@ export class Pixel {
       event,
     };
 
-    // Minimal implementation: fire-and-forget.
-    // TODO (interview): if request fails -> enqueue into sessionStorage and retry later.
+    // Минимальная реализация: отправляем событие сразу.
+    //
+    // TODO (interview, Part 1):
+    // - Сделать так, чтобы track() НЕ выбрасывал исключение наружу при сбое доставки.
+    // - Если доставка не удалась, положить payload в очередь в sessionStorage (ключ this.storageKey).
+    //   Под "сбоем доставки" в рамках задания понимается:
+    //   - fetch выбросил исключение (например, сеть недоступна)
+    //   - И/ИЛИ сервер вернул неуспешный ответ (response.ok === false)
+    //
+    // Важно: пиксель не должен ломать страницу — любые ошибки обработки нужно гасить
+    // и аккуратно складывать события в очередь.
     await fetch(this.endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
-      // keepalive helps when the page is unloading (not supported everywhere)
+      // keepalive помогает, когда страница выгружается (не везде поддерживается)
       keepalive: true,
     });
   }
